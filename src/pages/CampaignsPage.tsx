@@ -18,9 +18,9 @@ import { PublicKey } from '@solana/web3.js';
 // Mock data for all campaigns
 const allCampaigns: CampaignWithKey[] = [
   {
-    publicKey: new PublicKey('11111111111111111111111111111111'),
+    publicKey: new PublicKey('11111111111111111111111111111112'),
     cid: 1,
-    creator: new PublicKey('22222222222222222222222222222222'),
+    creator: new PublicKey('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA'),
     title: 'Solar-Powered Water Purification System',
     description: 'Bringing clean water to remote communities using sustainable solar technology. Our innovative purification system can serve 1000+ people daily.',
     imageUrl: 'https://images.unsplash.com/photo-1581092795442-1930a7b61527?w=800&h=600&fit=crop',
@@ -33,9 +33,9 @@ const allCampaigns: CampaignWithKey[] = [
     active: true,
   },
   {
-    publicKey: new PublicKey('33333333333333333333333333333333'),
+    publicKey: new PublicKey('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA'),
     cid: 2,
-    creator: new PublicKey('44444444444444444444444444444444'),
+    creator: new PublicKey('EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v'),
     title: 'Open Source Learning Platform',
     description: 'Building a decentralized educational platform that makes quality education accessible to everyone, everywhere.',
     imageUrl: 'https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=800&h=600&fit=crop',
@@ -48,9 +48,9 @@ const allCampaigns: CampaignWithKey[] = [
     active: true,
   },
   {
-    publicKey: new PublicKey('55555555555555555555555555555555'),
+    publicKey: new PublicKey('EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v'),
     cid: 3,
-    creator: new PublicKey('66666666666666666666666666666666'),
+    creator: new PublicKey('So11111111111111111111111111111111111111112'),
     title: 'Urban Vertical Farm Initiative',
     description: 'Creating sustainable food production in urban areas through innovative vertical farming techniques and community engagement.',
     imageUrl: 'https://images.unsplash.com/photo-1530836369250-ef72a3f5cda8?w=800&h=600&fit=crop',
@@ -63,9 +63,9 @@ const allCampaigns: CampaignWithKey[] = [
     active: true,
   },
   {
-    publicKey: new PublicKey('77777777777777777777777777777777'),
+    publicKey: new PublicKey('So11111111111111111111111111111111111111112'),
     cid: 4,
-    creator: new PublicKey('88888888888888888888888888888888'),
+    creator: new PublicKey('9WzDXwBbmkg8ZTbNMqUxvQRAyrZzDsGYdLVL9zYtAWWM'),
     title: 'AI-Powered Health Monitoring Wearable',
     description: 'Revolutionary wearable device that uses AI to predict health issues before they become serious problems.',
     imageUrl: 'https://images.unsplash.com/photo-1551698618-1dfe5d97d256?w=800&h=600&fit=crop',
@@ -78,9 +78,9 @@ const allCampaigns: CampaignWithKey[] = [
     active: true,
   },
   {
-    publicKey: new PublicKey('99999999999999999999999999999999'),
+    publicKey: new PublicKey('9WzDXwBbmkg8ZTbNMqUxvQRAyrZzDsGYdLVL9zYtAWWM'),
     cid: 5,
-    creator: new PublicKey('AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA'),
+    creator: new PublicKey('DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263'),
     title: 'Community Art Space',
     description: 'Creating a vibrant community space where local artists can showcase their work and teach art to children.',
     imageUrl: 'https://images.unsplash.com/photo-1460661419201-fd4cecdf8a8b?w=800&h=600&fit=crop',
