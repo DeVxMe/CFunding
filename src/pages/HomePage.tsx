@@ -17,54 +17,8 @@ import {
 import { CampaignWithKey } from '@/types/program';
 import { PublicKey } from '@solana/web3.js';
 
-// Mock data for featured campaigns
-const featuredCampaigns: CampaignWithKey[] = [
-  {
-    publicKey: new PublicKey('11111111111111111111111111111112'),
-    cid: 1,
-    creator: new PublicKey('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA'),
-    title: 'Solar-Powered Water Purification System',
-    description: 'Bringing clean water to remote communities using sustainable solar technology. Our innovative purification system can serve 1000+ people daily.',
-    imageUrl: 'https://images.unsplash.com/photo-1581092795442-1930a7b61527?w=800&h=600&fit=crop',
-    goal: 50000000000, // 50 SOL
-    amountRaised: 37500000000, // 37.5 SOL
-    timestamp: Date.now() / 1000,
-    donors: 157,
-    withdrawals: 0,
-    balance: 37500000000,
-    active: true,
-  },
-  {
-    publicKey: new PublicKey('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA'),
-    cid: 2,
-    creator: new PublicKey('EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v'),
-    title: 'Open Source Learning Platform',
-    description: 'Building a decentralized educational platform that makes quality education accessible to everyone, everywhere.',
-    imageUrl: 'https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=800&h=600&fit=crop',
-    goal: 30000000000, // 30 SOL
-    amountRaised: 18000000000, // 18 SOL
-    timestamp: Date.now() / 1000,
-    donors: 89,
-    withdrawals: 0,
-    balance: 18000000000,
-    active: true,
-  },
-  {
-    publicKey: new PublicKey('EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v'),
-    cid: 3,
-    creator: new PublicKey('So11111111111111111111111111111111111111112'),
-    title: 'Urban Vertical Farm Initiative',
-    description: 'Creating sustainable food production in urban areas through innovative vertical farming techniques and community engagement.',
-    imageUrl: 'https://images.unsplash.com/photo-1530836369250-ef72a3f5cda8?w=800&h=600&fit=crop',
-    goal: 75000000000, // 75 SOL
-    amountRaised: 45000000000, // 45 SOL
-    timestamp: Date.now() / 1000,
-    donors: 203,
-    withdrawals: 1,
-    balance: 35000000000,
-    active: true,
-  },
-];
+// Mock data for featured campaigns - empty for now
+const featuredCampaigns: CampaignWithKey[] = [];
 
 const features = [
   {
@@ -84,11 +38,11 @@ const features = [
   },
 ];
 
-const stats = [
-  { icon: Target, label: 'Total Raised', value: '2.4M SOL' },
-  { icon: Users, label: 'Active Campaigns', value: '1,247' },
-  { icon: TrendingUp, label: 'Success Rate', value: '94%' },
-];
+  const stats = [
+    { icon: Target, label: 'Total Raised', value: '0 SOL' },
+    { icon: Users, label: 'Active Campaigns', value: '0' },
+    { icon: TrendingUp, label: 'Success Rate', value: '0%' },
+  ];
 
 export const HomePage: React.FC = () => {
   const [donationModal, setDonationModal] = useState<{
@@ -190,25 +144,47 @@ export const HomePage: React.FC = () => {
             </p>
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-            {featuredCampaigns.map((campaign) => (
-              <CampaignCard
-                key={campaign.cid}
-                campaign={campaign}
-                onDonate={handleDonate}
-                onView={handleViewCampaign}
-              />
-            ))}
-          </div>
           
-          <div className="text-center">
-            <Link to="/campaigns">
-              <Button variant="outline" size="lg">
-                View All Campaigns
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </Button>
-            </Link>
-          </div>
+          {featuredCampaigns.length === 0 ? (
+            <div className="text-center py-16">
+              <Target className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
+              <h3 className="text-2xl font-semibold text-foreground mb-2">
+                No Campaigns Yet
+              </h3>
+              <p className="text-muted-foreground mb-6 max-w-md mx-auto">
+                Be the first to launch an innovative project on our platform. 
+                Create your campaign and start building the future!
+              </p>
+              <Link to="/create">
+                <Button className="btn-primary-gradient">
+                  Launch First Campaign
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Button>
+              </Link>
+            </div>
+          ) : (
+            <>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+                {featuredCampaigns.map((campaign) => (
+                  <CampaignCard
+                    key={campaign.cid}
+                    campaign={campaign}
+                    onDonate={handleDonate}
+                    onView={handleViewCampaign}
+                  />
+                ))}
+              </div>
+              
+              <div className="text-center">
+                <Link to="/campaigns">
+                  <Button variant="outline" size="lg">
+                    View All Campaigns
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </Button>
+                </Link>
+              </div>
+            </>
+          )}
         </div>
       </section>
 

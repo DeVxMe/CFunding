@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -11,88 +12,11 @@ import {
 } from '@/components/ui/select';
 import { CampaignCard } from '@/components/CampaignCard';
 import { DonationModal } from '@/components/DonationModal';
-import { Search, Filter, Grid, List } from 'lucide-react';
+import { Search, Filter, Grid, List, ArrowRight } from 'lucide-react';
 import { CampaignWithKey } from '@/types/program';
-import { PublicKey } from '@solana/web3.js';
 
-// Mock data for all campaigns
-const allCampaigns: CampaignWithKey[] = [
-  {
-    publicKey: new PublicKey('11111111111111111111111111111112'),
-    cid: 1,
-    creator: new PublicKey('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA'),
-    title: 'Solar-Powered Water Purification System',
-    description: 'Bringing clean water to remote communities using sustainable solar technology. Our innovative purification system can serve 1000+ people daily.',
-    imageUrl: 'https://images.unsplash.com/photo-1581092795442-1930a7b61527?w=800&h=600&fit=crop',
-    goal: 50000000000,
-    amountRaised: 37500000000,
-    timestamp: Date.now() / 1000,
-    donors: 157,
-    withdrawals: 0,
-    balance: 37500000000,
-    active: true,
-  },
-  {
-    publicKey: new PublicKey('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA'),
-    cid: 2,
-    creator: new PublicKey('EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v'),
-    title: 'Open Source Learning Platform',
-    description: 'Building a decentralized educational platform that makes quality education accessible to everyone, everywhere.',
-    imageUrl: 'https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=800&h=600&fit=crop',
-    goal: 30000000000,
-    amountRaised: 18000000000,
-    timestamp: Date.now() / 1000 - 86400,
-    donors: 89,
-    withdrawals: 0,
-    balance: 18000000000,
-    active: true,
-  },
-  {
-    publicKey: new PublicKey('EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v'),
-    cid: 3,
-    creator: new PublicKey('So11111111111111111111111111111111111111112'),
-    title: 'Urban Vertical Farm Initiative',
-    description: 'Creating sustainable food production in urban areas through innovative vertical farming techniques and community engagement.',
-    imageUrl: 'https://images.unsplash.com/photo-1530836369250-ef72a3f5cda8?w=800&h=600&fit=crop',
-    goal: 75000000000,
-    amountRaised: 45000000000,
-    timestamp: Date.now() / 1000 - 172800,
-    donors: 203,
-    withdrawals: 1,
-    balance: 35000000000,
-    active: true,
-  },
-  {
-    publicKey: new PublicKey('So11111111111111111111111111111111111111112'),
-    cid: 4,
-    creator: new PublicKey('9WzDXwBbmkg8ZTbNMqUxvQRAyrZzDsGYdLVL9zYtAWWM'),
-    title: 'AI-Powered Health Monitoring Wearable',
-    description: 'Revolutionary wearable device that uses AI to predict health issues before they become serious problems.',
-    imageUrl: 'https://images.unsplash.com/photo-1551698618-1dfe5d97d256?w=800&h=600&fit=crop',
-    goal: 100000000000,
-    amountRaised: 25000000000,
-    timestamp: Date.now() / 1000 - 259200,
-    donors: 67,
-    withdrawals: 0,
-    balance: 25000000000,
-    active: true,
-  },
-  {
-    publicKey: new PublicKey('9WzDXwBbmkg8ZTbNMqUxvQRAyrZzDsGYdLVL9zYtAWWM'),
-    cid: 5,
-    creator: new PublicKey('DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263'),
-    title: 'Community Art Space',
-    description: 'Creating a vibrant community space where local artists can showcase their work and teach art to children.',
-    imageUrl: 'https://images.unsplash.com/photo-1460661419201-fd4cecdf8a8b?w=800&h=600&fit=crop',
-    goal: 20000000000,
-    amountRaised: 20000000000,
-    timestamp: Date.now() / 1000 - 345600,
-    donors: 145,
-    withdrawals: 2,
-    balance: 5000000000,
-    active: false,
-  },
-];
+// Empty campaigns array - will be populated from blockchain
+const allCampaigns: CampaignWithKey[] = [];
 
 export const CampaignsPage: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
@@ -137,7 +61,6 @@ export const CampaignsPage: React.FC = () => {
         case 'most-funded':
           return b.amountRaised - a.amountRaised;
         case 'ending-soon':
-          // For demo purposes, we'll sort by time remaining (mock calculation)
           return a.timestamp - b.timestamp;
         default:
           return 0;
@@ -258,13 +181,25 @@ export const CampaignsPage: React.FC = () => {
 
         {/* Campaign Grid/List */}
         {filteredCampaigns.length === 0 ? (
-          <div className="text-center py-12">
-            <h3 className="text-xl font-semibold text-foreground mb-2">
-              No campaigns found
+          <div className="text-center py-16">
+            <Search className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
+            <h3 className="text-2xl font-semibold text-foreground mb-2">
+              {allCampaigns.length === 0 ? 'No Campaigns Found' : 'No Results Found'}
             </h3>
-            <p className="text-muted-foreground">
-              Try adjusting your search or filters to find campaigns.
+            <p className="text-muted-foreground mb-6">
+              {allCampaigns.length === 0 
+                ? 'Be the first to create a campaign on our platform!'
+                : 'Try adjusting your search or filters to find campaigns.'
+              }
             </p>
+            {allCampaigns.length === 0 && (
+              <Link to="/create">
+                <Button className="btn-primary-gradient">
+                  Create First Campaign
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Button>
+              </Link>
+            )}
           </div>
         ) : (
           <div className={`grid gap-6 ${
@@ -283,7 +218,7 @@ export const CampaignsPage: React.FC = () => {
           </div>
         )}
 
-        {/* Load More */}
+        {/* Load More - only show if there are campaigns */}
         {filteredCampaigns.length > 0 && (
           <div className="text-center mt-12">
             <Button variant="outline" size="lg">

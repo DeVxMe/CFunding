@@ -7,7 +7,10 @@ import { WalletContextProvider } from "@/contexts/WalletContext";
 import { Navigation } from "@/components/Navigation";
 import { HomePage } from "./pages/HomePage";
 import { CampaignsPage } from "./pages/CampaignsPage";
+import { CampaignDetailPage } from "./pages/CampaignDetailPage";
 import { CreateCampaignPage } from "./pages/CreateCampaignPage";
+import { DashboardPage } from "./pages/DashboardPage";
+import { TransactionsPage } from "./pages/TransactionsPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -23,7 +26,10 @@ const App = () => (
           <Routes>
             <Route path="/" element={<HomePage />} />
             <Route path="/campaigns" element={<CampaignsPage />} />
+            <Route path="/campaigns/:id" element={<CampaignDetailPage />} />
             <Route path="/create" element={<CreateCampaignPage />} />
+            <Route path="/dashboard" element={<DashboardPage />} />
+            <Route path="/transactions" element={<TransactionsPage />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
