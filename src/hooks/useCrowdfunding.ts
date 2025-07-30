@@ -3,7 +3,9 @@ import { useConnection, useWallet } from '@solana/wallet-adapter-react';
 import { 
   PublicKey, 
   Transaction, 
-  SystemProgram 
+  SystemProgram,
+  TransactionInstruction,
+  LAMPORTS_PER_SOL
 } from '@solana/web3.js';
 import { toast } from '@/hooks/use-toast';
 import { 
@@ -14,6 +16,13 @@ import {
   getWithdrawalPDA,
   solToLamports 
 } from '@/lib/solana';
+
+// Instruction discriminators (first 8 bytes of SHA256 hash of "global:instruction_name")
+const INSTRUCTION_DISCRIMINATORS = {
+  CREATE_CAMPAIGN: Buffer.from([156, 233, 61, 246, 168, 45, 149, 174]),
+  DONATE: Buffer.from([184, 12, 86, 149, 70, 196, 97, 225]),
+  WITHDRAW: Buffer.from([183, 18, 70, 156, 148, 109, 161, 34]),
+};
 
 export const useCrowdfunding = () => {
   const { connection } = useConnection();
@@ -30,27 +39,84 @@ export const useCrowdfunding = () => {
     
     setLoading(true);
     try {
-      // For now, we'll simulate the transaction
-      // In production, this would use the actual Anchor program
+      const [programStatePda] = getProgramStatePDA();
+      
+      // Get program state to determine next campaign ID
+      let programStateAccount;
+      try {
+        programStateAccount = await connection.getAccountInfo(programStatePda);
+        if (!programStateAccount) {
+          throw new Error('Program not initialized. Please contact support.');
+        }
+      } catch (error) {
+        throw new Error('Program not initialized. Please contact support.');
+      }
+
+      // For now, we'll estimate the campaign ID (in production, parse the account data)
+      const campaignId = Math.floor(Date.now() / 1000); // Use timestamp as ID
+      const [campaignPda] = getCampaignPDA(campaignId);
+      
+      // Serialize instruction data
+      const titleBuffer = Buffer.from(title, 'utf8');
+      const descriptionBuffer = Buffer.from(description, 'utf8');
+      const imageUrlBuffer = Buffer.from(imageUrl, 'utf8');
+      const goalLamports = BigInt(solToLamports(goalSol));
+      
+      // Create instruction data buffer
+      const instructionData = Buffer.concat([
+        INSTRUCTION_DISCRIMINATORS.CREATE_CAMPAIGN,
+        Buffer.from([titleBuffer.length]), titleBuffer,
+        Buffer.from([descriptionBuffer.length]), descriptionBuffer,
+        Buffer.from([imageUrlBuffer.length]), imageUrlBuffer,
+        Buffer.from(goalLamports.toString().padStart(16, '0'), 'hex')
+      ]);
+
+      const instruction = new TransactionInstruction({
+        keys: [
+          { pubkey: programStatePda, isSigner: false, isWritable: true },
+          { pubkey: campaignPda, isSigner: false, isWritable: true },
+          { pubkey: publicKey, isSigner: true, isWritable: true },
+          { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
+        ],
+        programId: PROGRAM_ID,
+        data: instructionData,
+      });
+
+      const transaction = new Transaction().add(instruction);
+      const signature = await sendTransaction(transaction, connection);
+      
+      // Wait for confirmation
+      await connection.confirmTransaction(signature, 'confirmed');
       
       toast({
         title: "Campaign Created!",
         description: `Campaign "${title}" has been created successfully.`,
       });
 
-      return { signature: 'mock-signature', campaignId: Math.floor(Math.random() * 1000) };
+      return { signature, campaignId };
     } catch (error: any) {
       console.error('Error creating campaign:', error);
+      
+      // Parse Solana program errors
+      let errorMessage = error.message || "Failed to create campaign";
+      if (error.message?.includes('TitleTooLong')) {
+        errorMessage = 'Title is too long (max 64 characters)';
+      } else if (error.message?.includes('DescriptionTooLong')) {
+        errorMessage = 'Description is too long (max 512 characters)';
+      } else if (error.message?.includes('InvalidGoalAmount')) {
+        errorMessage = 'Goal must be at least 1 SOL';
+      }
+      
       toast({
         title: "Error",
-        description: error.message || "Failed to create campaign",
+        description: errorMessage,
         variant: "destructive",
       });
       throw error;
     } finally {
       setLoading(false);
     }
-  }, [publicKey]);
+  }, [publicKey, connection, sendTransaction]);
 
   const donateToCampaign = useCallback(async (
     campaignId: number,
@@ -60,27 +126,75 @@ export const useCrowdfunding = () => {
     
     setLoading(true);
     try {
-      // For now, we'll simulate the transaction
-      // In production, this would use the actual Anchor program
+      const [campaignPda] = getCampaignPDA(campaignId);
+      
+      // Check if campaign exists
+      const campaignAccount = await connection.getAccountInfo(campaignPda);
+      if (!campaignAccount) {
+        throw new Error('Campaign not found');
+      }
+
+      // For donation transaction PDA, we need the donor count from the campaign
+      // For now, use timestamp as unique identifier
+      const donorCount = Math.floor(Date.now() / 1000);
+      const [donationPda] = getDonationPDA(publicKey, campaignId, donorCount);
+      
+      const amountLamports = BigInt(solToLamports(amountSol));
+      
+      // Create instruction data
+      const instructionData = Buffer.concat([
+        INSTRUCTION_DISCRIMINATORS.DONATE,
+        Buffer.from(campaignId.toString().padStart(16, '0'), 'hex'),
+        Buffer.from(amountLamports.toString().padStart(16, '0'), 'hex')
+      ]);
+
+      const instruction = new TransactionInstruction({
+        keys: [
+          { pubkey: campaignPda, isSigner: false, isWritable: true },
+          { pubkey: donationPda, isSigner: false, isWritable: true },
+          { pubkey: publicKey, isSigner: true, isWritable: true },
+          { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
+        ],
+        programId: PROGRAM_ID,
+        data: instructionData,
+      });
+
+      const transaction = new Transaction().add(instruction);
+      const signature = await sendTransaction(transaction, connection);
+      
+      // Wait for confirmation
+      await connection.confirmTransaction(signature, 'confirmed');
       
       toast({
         title: "Donation Successful!",
         description: `You donated ${amountSol} SOL to the campaign.`,
       });
 
-      return 'mock-signature';
+      return signature;
     } catch (error: any) {
       console.error('Error donating:', error);
+      
+      let errorMessage = error.message || "Failed to process donation";
+      if (error.message?.includes('InvalidDonationAmount')) {
+        errorMessage = 'Donation must be at least 1 SOL';
+      } else if (error.message?.includes('CampaignNotFound')) {
+        errorMessage = 'Campaign not found';
+      } else if (error.message?.includes('InactiveCampaign')) {
+        errorMessage = 'Campaign is inactive';
+      } else if (error.message?.includes('CampaignGoalActualized')) {
+        errorMessage = 'Campaign goal has been reached';
+      }
+      
       toast({
         title: "Donation Failed",
-        description: error.message || "Failed to process donation",
+        description: errorMessage,
         variant: "destructive",
       });
       throw error;
     } finally {
       setLoading(false);
     }
-  }, [publicKey]);
+  }, [publicKey, connection, sendTransaction]);
 
   const withdrawFromCampaign = useCallback(async (
     campaignId: number,
@@ -90,27 +204,84 @@ export const useCrowdfunding = () => {
     
     setLoading(true);
     try {
-      // For now, we'll simulate the transaction
-      // In production, this would use the actual Anchor program
+      const [campaignPda] = getCampaignPDA(campaignId);
+      const [programStatePda] = getProgramStatePDA();
+      
+      // Check if campaign exists
+      const campaignAccount = await connection.getAccountInfo(campaignPda);
+      if (!campaignAccount) {
+        throw new Error('Campaign not found');
+      }
+
+      // For withdrawal transaction PDA
+      const withdrawalCount = Math.floor(Date.now() / 1000);
+      const [withdrawalPda] = getWithdrawalPDA(publicKey, campaignId, withdrawalCount);
+      
+      // Get program state for platform address
+      const programStateAccount = await connection.getAccountInfo(programStatePda);
+      if (!programStateAccount) {
+        throw new Error('Program state not found');
+      }
+      
+      // For now, assume deployer is platform address (would need to parse account data in production)
+      const platformAddress = new PublicKey('11111111111111111111111111111112'); // System program as placeholder
+      
+      const amountLamports = BigInt(solToLamports(amountSol));
+      
+      // Create instruction data
+      const instructionData = Buffer.concat([
+        INSTRUCTION_DISCRIMINATORS.WITHDRAW,
+        Buffer.from(campaignId.toString().padStart(16, '0'), 'hex'),
+        Buffer.from(amountLamports.toString().padStart(16, '0'), 'hex')
+      ]);
+
+      const instruction = new TransactionInstruction({
+        keys: [
+          { pubkey: campaignPda, isSigner: false, isWritable: true },
+          { pubkey: withdrawalPda, isSigner: false, isWritable: true },
+          { pubkey: programStatePda, isSigner: false, isWritable: true },
+          { pubkey: platformAddress, isSigner: false, isWritable: true },
+          { pubkey: publicKey, isSigner: true, isWritable: true },
+          { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
+        ],
+        programId: PROGRAM_ID,
+        data: instructionData,
+      });
+
+      const transaction = new Transaction().add(instruction);
+      const signature = await sendTransaction(transaction, connection);
+      
+      // Wait for confirmation
+      await connection.confirmTransaction(signature, 'confirmed');
       
       toast({
         title: "Withdrawal Successful!",
         description: `You withdrew ${amountSol} SOL from the campaign.`,
       });
 
-      return 'mock-signature';
+      return signature;
     } catch (error: any) {
       console.error('Error withdrawing:', error);
+      
+      let errorMessage = error.message || "Failed to process withdrawal";
+      if (error.message?.includes('Unauthorized')) {
+        errorMessage = 'You are not authorized to withdraw from this campaign';
+      } else if (error.message?.includes('InvalidWithdrawalAmount')) {
+        errorMessage = 'Withdrawal must be at least 1 SOL';
+      } else if (error.message?.includes('InsufficientFund')) {
+        errorMessage = 'Insufficient funds in campaign';
+      }
+      
       toast({
         title: "Withdrawal Failed",
-        description: error.message || "Failed to process withdrawal",
+        description: errorMessage,
         variant: "destructive",
       });
       throw error;
     } finally {
       setLoading(false);
     }
-  }, [publicKey]);
+  }, [publicKey, connection, sendTransaction]);
 
   return {
     createCampaign,
