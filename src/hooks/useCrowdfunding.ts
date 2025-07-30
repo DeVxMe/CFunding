@@ -5,7 +5,8 @@ import {
   Transaction, 
   SystemProgram,
   TransactionInstruction,
-  LAMPORTS_PER_SOL
+  LAMPORTS_PER_SOL,
+  Keypair
 } from '@solana/web3.js';
 import { toast } from '@/hooks/use-toast';
 import { 
@@ -17,8 +18,12 @@ import {
   solToLamports 
 } from '@/lib/solana';
 
+// Generate a random deployer keypair for initialization
+const DEPLOYER_KEYPAIR = Keypair.generate();
+
 // Instruction discriminators (first 8 bytes of SHA256 hash of "global:instruction_name")
 const INSTRUCTION_DISCRIMINATORS = {
+  INITIALIZE: new Uint8Array([175, 175, 109, 31, 13, 152, 155, 237]),
   CREATE_CAMPAIGN: new Uint8Array([156, 233, 61, 246, 168, 45, 149, 174]),
   DONATE: new Uint8Array([184, 12, 86, 149, 70, 196, 97, 225]),
   WITHDRAW: new Uint8Array([183, 18, 70, 156, 148, 109, 161, 34]),
@@ -28,6 +33,74 @@ export const useCrowdfunding = () => {
   const { connection } = useConnection();
   const { publicKey, sendTransaction } = useWallet();
   const [loading, setLoading] = useState(false);
+
+  const initializeProgram = useCallback(async () => {
+    if (!publicKey) throw new Error('Wallet not connected');
+    
+    setLoading(true);
+    try {
+      const [programStatePda] = getProgramStatePDA();
+      
+      // Check if already initialized
+      const existingAccount = await connection.getAccountInfo(programStatePda);
+      if (existingAccount) {
+        toast({
+          title: "Already Initialized",
+          description: "Program is already initialized.",
+        });
+        return;
+      }
+      
+      // Platform fee: 2.5% (250 basis points)
+      const platformFee = 250;
+      const platformAddress = DEPLOYER_KEYPAIR.publicKey;
+      
+      // Create instruction data
+      const platformFeeBytes = new Uint8Array(2);
+      const view = new DataView(platformFeeBytes.buffer);
+      view.setUint16(0, platformFee, true); // little endian
+      
+      const instructionData = new Uint8Array([
+        ...INSTRUCTION_DISCRIMINATORS.INITIALIZE,
+        ...platformFeeBytes,
+        ...platformAddress.toBytes()
+      ]);
+
+      const instruction = new TransactionInstruction({
+        keys: [
+          { pubkey: programStatePda, isSigner: false, isWritable: true },
+          { pubkey: publicKey, isSigner: true, isWritable: true },
+          { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
+        ],
+        programId: PROGRAM_ID,
+        data: Buffer.from(instructionData),
+      });
+
+      const transaction = new Transaction().add(instruction);
+      const signature = await sendTransaction(transaction, connection);
+      
+      // Wait for confirmation
+      await connection.confirmTransaction(signature, 'confirmed');
+      
+      toast({
+        title: "Program Initialized!",
+        description: "The crowdfunding program has been initialized successfully.",
+      });
+
+      return signature;
+    } catch (error: any) {
+      console.error('Error initializing program:', error);
+      
+      toast({
+        title: "Initialization Failed",
+        description: error.message || "Failed to initialize program",
+        variant: "destructive",
+      });
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  }, [publicKey, connection, sendTransaction]);
 
   const createCampaign = useCallback(async (
     title: string,
@@ -46,10 +119,14 @@ export const useCrowdfunding = () => {
       try {
         programStateAccount = await connection.getAccountInfo(programStatePda);
         if (!programStateAccount) {
-          throw new Error('Program not initialized. Please contact support.');
+          // Auto-initialize if not initialized
+          await initializeProgram();
+          programStateAccount = await connection.getAccountInfo(programStatePda);
         }
       } catch (error) {
-        throw new Error('Program not initialized. Please contact support.');
+        // Auto-initialize if not initialized
+        await initializeProgram();
+        programStateAccount = await connection.getAccountInfo(programStatePda);
       }
 
       // For now, we'll estimate the campaign ID (in production, parse the account data)
@@ -237,8 +314,8 @@ export const useCrowdfunding = () => {
         throw new Error('Program state not found');
       }
       
-      // For now, assume deployer is platform address (would need to parse account data in production)
-      const platformAddress = new PublicKey('11111111111111111111111111111112'); // System program as placeholder
+      // Use the generated deployer keypair as platform address
+      const platformAddress = DEPLOYER_KEYPAIR.publicKey;
       
       const amountLamports = BigInt(solToLamports(amountSol));
       
@@ -307,6 +384,7 @@ export const useCrowdfunding = () => {
   }, [publicKey, connection, sendTransaction]);
 
   return {
+    initializeProgram,
     createCampaign,
     donateToCampaign,
     withdrawFromCampaign,
