@@ -19,9 +19,9 @@ import {
 
 // Instruction discriminators (first 8 bytes of SHA256 hash of "global:instruction_name")
 const INSTRUCTION_DISCRIMINATORS = {
-  CREATE_CAMPAIGN: Buffer.from([156, 233, 61, 246, 168, 45, 149, 174]),
-  DONATE: Buffer.from([184, 12, 86, 149, 70, 196, 97, 225]),
-  WITHDRAW: Buffer.from([183, 18, 70, 156, 148, 109, 161, 34]),
+  CREATE_CAMPAIGN: new Uint8Array([156, 233, 61, 246, 168, 45, 149, 174]),
+  DONATE: new Uint8Array([184, 12, 86, 149, 70, 196, 97, 225]),
+  WITHDRAW: new Uint8Array([183, 18, 70, 156, 148, 109, 161, 34]),
 };
 
 export const useCrowdfunding = () => {
@@ -56,19 +56,24 @@ export const useCrowdfunding = () => {
       const campaignId = Math.floor(Date.now() / 1000); // Use timestamp as ID
       const [campaignPda] = getCampaignPDA(campaignId);
       
-      // Serialize instruction data
-      const titleBuffer = Buffer.from(title, 'utf8');
-      const descriptionBuffer = Buffer.from(description, 'utf8');
-      const imageUrlBuffer = Buffer.from(imageUrl, 'utf8');
+      // Serialize instruction data using TextEncoder
+      const encoder = new TextEncoder();
+      const titleBytes = encoder.encode(title);
+      const descriptionBytes = encoder.encode(description);
+      const imageUrlBytes = encoder.encode(imageUrl);
       const goalLamports = BigInt(solToLamports(goalSol));
       
-      // Create instruction data buffer
-      const instructionData = Buffer.concat([
-        INSTRUCTION_DISCRIMINATORS.CREATE_CAMPAIGN,
-        Buffer.from([titleBuffer.length]), titleBuffer,
-        Buffer.from([descriptionBuffer.length]), descriptionBuffer,
-        Buffer.from([imageUrlBuffer.length]), imageUrlBuffer,
-        Buffer.from(goalLamports.toString().padStart(16, '0'), 'hex')
+      // Create instruction data using Uint8Array
+      const goalBytes = new Uint8Array(8);
+      const view = new DataView(goalBytes.buffer);
+      view.setBigUint64(0, goalLamports, true); // little endian
+      
+      const instructionData = new Uint8Array([
+        ...INSTRUCTION_DISCRIMINATORS.CREATE_CAMPAIGN,
+        titleBytes.length, ...titleBytes,
+        descriptionBytes.length, ...descriptionBytes,
+        imageUrlBytes.length, ...imageUrlBytes,
+        ...goalBytes
       ]);
 
       const instruction = new TransactionInstruction({
@@ -79,7 +84,7 @@ export const useCrowdfunding = () => {
           { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
         ],
         programId: PROGRAM_ID,
-        data: instructionData,
+        data: Buffer.from(instructionData),
       });
 
       const transaction = new Transaction().add(instruction);
@@ -141,11 +146,20 @@ export const useCrowdfunding = () => {
       
       const amountLamports = BigInt(solToLamports(amountSol));
       
-      // Create instruction data
-      const instructionData = Buffer.concat([
-        INSTRUCTION_DISCRIMINATORS.DONATE,
-        Buffer.from(campaignId.toString().padStart(16, '0'), 'hex'),
-        Buffer.from(amountLamports.toString().padStart(16, '0'), 'hex')
+      // Create instruction data using Uint8Array
+      const campaignIdBytes = new Uint8Array(8);
+      const amountBytes = new Uint8Array(8);
+      
+      const campaignIdView = new DataView(campaignIdBytes.buffer);
+      const amountView = new DataView(amountBytes.buffer);
+      
+      campaignIdView.setBigUint64(0, BigInt(campaignId), true);
+      amountView.setBigUint64(0, amountLamports, true);
+      
+      const instructionData = new Uint8Array([
+        ...INSTRUCTION_DISCRIMINATORS.DONATE,
+        ...campaignIdBytes,
+        ...amountBytes
       ]);
 
       const instruction = new TransactionInstruction({
@@ -156,7 +170,7 @@ export const useCrowdfunding = () => {
           { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
         ],
         programId: PROGRAM_ID,
-        data: instructionData,
+        data: Buffer.from(instructionData),
       });
 
       const transaction = new Transaction().add(instruction);
@@ -228,11 +242,20 @@ export const useCrowdfunding = () => {
       
       const amountLamports = BigInt(solToLamports(amountSol));
       
-      // Create instruction data
-      const instructionData = Buffer.concat([
-        INSTRUCTION_DISCRIMINATORS.WITHDRAW,
-        Buffer.from(campaignId.toString().padStart(16, '0'), 'hex'),
-        Buffer.from(amountLamports.toString().padStart(16, '0'), 'hex')
+      // Create instruction data using Uint8Array
+      const campaignIdBytes = new Uint8Array(8);
+      const amountBytes = new Uint8Array(8);
+      
+      const campaignIdView = new DataView(campaignIdBytes.buffer);
+      const amountView = new DataView(amountBytes.buffer);
+      
+      campaignIdView.setBigUint64(0, BigInt(campaignId), true);
+      amountView.setBigUint64(0, amountLamports, true);
+      
+      const instructionData = new Uint8Array([
+        ...INSTRUCTION_DISCRIMINATORS.WITHDRAW,
+        ...campaignIdBytes,
+        ...amountBytes
       ]);
 
       const instruction = new TransactionInstruction({
@@ -245,7 +268,7 @@ export const useCrowdfunding = () => {
           { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
         ],
         programId: PROGRAM_ID,
-        data: instructionData,
+        data: Buffer.from(instructionData),
       });
 
       const transaction = new Transaction().add(instruction);
