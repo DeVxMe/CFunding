@@ -133,31 +133,39 @@ export const useCrowdfunding = () => {
       const campaignId = Math.floor(Date.now() / 1000); // Use timestamp as ID
       const [campaignPda] = getCampaignPDA(campaignId);
       
-      // Serialize instruction data with fixed-size fields
+      // Serialize instruction data properly for Anchor program
       const encoder = new TextEncoder();
-      
-      // Prepare strings with padding/truncation
-      const titleBytes = new Uint8Array(64);
-      const descriptionBytes = new Uint8Array(512);
-      const imageUrlBytes = new Uint8Array(256);
-      
-      // Encode and copy to fixed-size arrays
-      const titleEncoded = encoder.encode(title);
-      const descriptionEncoded = encoder.encode(description);
-      const imageUrlEncoded = encoder.encode(imageUrl);
-      
-      titleBytes.set(titleEncoded.slice(0, 64));
-      descriptionBytes.set(descriptionEncoded.slice(0, 512));
-      imageUrlBytes.set(imageUrlEncoded.slice(0, 256));
-      
+      const titleBytes = encoder.encode(title);
+      const descriptionBytes = encoder.encode(description);
+      const imageUrlBytes = encoder.encode(imageUrl);
       const goalLamports = BigInt(solToLamports(goalSol));
-      const goalBytes = new Uint8Array(8);
-      const view = new DataView(goalBytes.buffer);
-      view.setBigUint64(0, goalLamports, true); // little endian
       
-      // Create simple instruction data with just discriminator and goal
+      // Create buffers for each field
+      const titleLength = new Uint8Array(4);
+      const titleLengthView = new DataView(titleLength.buffer);
+      titleLengthView.setUint32(0, titleBytes.length, true);
+      
+      const descriptionLength = new Uint8Array(4);
+      const descriptionLengthView = new DataView(descriptionLength.buffer);
+      descriptionLengthView.setUint32(0, descriptionBytes.length, true);
+      
+      const imageUrlLength = new Uint8Array(4);
+      const imageUrlLengthView = new DataView(imageUrlLength.buffer);
+      imageUrlLengthView.setUint32(0, imageUrlBytes.length, true);
+      
+      const goalBytes = new Uint8Array(8);
+      const goalView = new DataView(goalBytes.buffer);
+      goalView.setBigUint64(0, goalLamports, true);
+      
+      // Create instruction data in Anchor format
       const instructionData = new Uint8Array([
         ...INSTRUCTION_DISCRIMINATORS.CREATE_CAMPAIGN,
+        ...titleLength,
+        ...titleBytes,
+        ...descriptionLength,
+        ...descriptionBytes,
+        ...imageUrlLength,
+        ...imageUrlBytes,
         ...goalBytes
       ]);
 
