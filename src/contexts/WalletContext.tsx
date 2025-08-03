@@ -16,7 +16,7 @@ interface Props {
 }
 
 export const WalletContextProvider: React.FC<Props> = ({ children }) => {
-  const network = NETWORK === 'mainnet-beta' ? WalletAdapterNetwork.Mainnet : WalletAdapterNetwork.Devnet;
+  const network = WalletAdapterNetwork.Devnet;
   const endpoint = RPC_URL;
 
   const wallets = useMemo(

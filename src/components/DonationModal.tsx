@@ -12,7 +12,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { WalletMultiButton } from '@solana/wallet-adapter-react-ui';
-import { useCrowdfunding } from '@/hooks/useCrowdfunding';
+import { useAnchorCrowdfunding } from '@/hooks/useAnchorCrowdfunding';
 import { isValidSolAmount } from '@/lib/solana';
 import { Loader2, Heart } from 'lucide-react';
 
@@ -32,7 +32,7 @@ export const DonationModal: React.FC<DonationModalProps> = ({
   onSuccess,
 }) => {
   const { connected } = useWallet();
-  const { donateToCampaign, loading } = useCrowdfunding();
+  const { donateToCampaign, loading } = useAnchorCrowdfunding();
   const [amount, setAmount] = useState('');
   const [error, setError] = useState('');
 

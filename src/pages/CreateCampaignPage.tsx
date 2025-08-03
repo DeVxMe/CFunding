@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { WalletMultiButton } from '@solana/wallet-adapter-react-ui';
-import { useCrowdfunding } from '@/hooks/useCrowdfunding';
+import { useAnchorCrowdfunding } from '@/hooks/useAnchorCrowdfunding';
 import { isValidSolAmount } from '@/lib/solana';
 import { 
   Loader2, 
@@ -36,7 +36,7 @@ interface FormErrors {
 export const CreateCampaignPage: React.FC = () => {
   const navigate = useNavigate();
   const { connected } = useWallet();
-  const { createCampaign, loading } = useCrowdfunding();
+  const { createCampaign, loading } = useAnchorCrowdfunding();
   
   const [formData, setFormData] = useState<FormData>({
     title: '',
