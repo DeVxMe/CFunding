@@ -133,38 +133,39 @@ export const useCrowdfunding = () => {
       const campaignId = Math.floor(Date.now() / 1000); // Use timestamp as ID
       const [campaignPda] = getCampaignPDA(campaignId);
       
-      // Serialize instruction data properly for Anchor program
-      const encoder = new TextEncoder();
-      const titleBytes = encoder.encode(title);
-      const descriptionBytes = encoder.encode(description);
-      const imageUrlBytes = encoder.encode(imageUrl);
+      // Create instruction data using Borsh serialization format expected by Anchor
       const goalLamports = BigInt(solToLamports(goalSol));
-      
-      // Create buffers for each field
-      const titleLength = new Uint8Array(4);
-      const titleLengthView = new DataView(titleLength.buffer);
-      titleLengthView.setUint32(0, titleBytes.length, true);
-      
-      const descriptionLength = new Uint8Array(4);
-      const descriptionLengthView = new DataView(descriptionLength.buffer);
-      descriptionLengthView.setUint32(0, descriptionBytes.length, true);
-      
-      const imageUrlLength = new Uint8Array(4);
-      const imageUrlLengthView = new DataView(imageUrlLength.buffer);
-      imageUrlLengthView.setUint32(0, imageUrlBytes.length, true);
-      
       const goalBytes = new Uint8Array(8);
       const goalView = new DataView(goalBytes.buffer);
       goalView.setBigUint64(0, goalLamports, true);
       
-      // Create instruction data in Anchor format
+      // Encode strings as UTF-8
+      const encoder = new TextEncoder();
+      const titleBytes = encoder.encode(title);
+      const descriptionBytes = encoder.encode(description);
+      const imageUrlBytes = encoder.encode(imageUrl);
+      
+      // Create length prefixed strings (Borsh format)
+      const titleLengthBytes = new Uint8Array(4);
+      const titleLengthView = new DataView(titleLengthBytes.buffer);
+      titleLengthView.setUint32(0, titleBytes.length, true);
+      
+      const descLengthBytes = new Uint8Array(4);
+      const descLengthView = new DataView(descLengthBytes.buffer);
+      descLengthView.setUint32(0, descriptionBytes.length, true);
+      
+      const urlLengthBytes = new Uint8Array(4);
+      const urlLengthView = new DataView(urlLengthBytes.buffer);
+      urlLengthView.setUint32(0, imageUrlBytes.length, true);
+      
+      // Combine all data in Borsh serialization order
       const instructionData = new Uint8Array([
         ...INSTRUCTION_DISCRIMINATORS.CREATE_CAMPAIGN,
-        ...titleLength,
+        ...titleLengthBytes,
         ...titleBytes,
-        ...descriptionLength,
+        ...descLengthBytes,
         ...descriptionBytes,
-        ...imageUrlLength,
+        ...urlLengthBytes,
         ...imageUrlBytes,
         ...goalBytes
       ]);
